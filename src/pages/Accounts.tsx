@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { CheckCircle, XCircle, RefreshCw, Link, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,8 +20,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Mock data for YouTube accounts
 const initialAccounts = [
   {
     id: 1,
@@ -53,9 +54,9 @@ const Accounts = () => {
   const [isProxyDialogOpen, setIsProxyDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [proxyValue, setProxyValue] = useState("");
+  const isMobile = useIsMobile();
 
   const handleAddAccount = () => {
-    // In a real application, this would trigger Google OAuth
     toast.success("Authentication successful!", {
       description: "New YouTube account added successfully.",
     });
@@ -133,9 +134,153 @@ const Accounts = () => {
     setSelectedAccountId(null);
   };
 
+  const renderAccountCards = () => {
+    return accounts.map((account) => (
+      <Card key={account.id} className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-medium">{account.email}</CardTitle>
+          <div className="flex items-center space-x-2 text-sm">
+            {account.status === "active" ? (
+              <div className="flex items-center">
+                <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                <span>Active</span>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                <span>Inactive</span>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="text-sm pb-4">
+          <div className="grid gap-2">
+            <div>
+              <div className="text-muted-foreground mb-1">Proxy:</div>
+              <div className={account.proxy === "Lost" ? "text-red-500" : ""}>
+                {account.proxy}
+              </div>
+            </div>
+            <div>
+              <div className="text-muted-foreground mb-1">Connected Since:</div>
+              <div>{account.connectedDate}</div>
+            </div>
+            <div className="flex items-center justify-between mt-2 pt-2 border-t">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleToggleStatus(account.id)}
+                className="h-8 px-2"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                {account.status === "active" ? "Disconnect" : "Reconnect"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => openProxyDialog(account.id)}
+                className="h-8 px-2"
+              >
+                <Link className="h-4 w-4 mr-2" />
+                Proxy
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDeleteAccount(account.id)}
+                className="h-8 px-2"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    ));
+  };
+
+  const renderAccountTable = () => {
+    return (
+      <div className="rounded-md border">
+        <ScrollArea className="max-h-[65vh]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Proxy</TableHead>
+                <TableHead>Connected Since</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {accounts.map((account) => (
+                <TableRow key={account.id}>
+                  <TableCell className="font-medium">{account.email}</TableCell>
+                  <TableCell>
+                    {account.status === "active" ? (
+                      <div className="flex items-center">
+                        <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
+                        <span>Active</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <XCircle className="mr-2 h-4 w-4 text-red-500" />
+                        <span>Inactive</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center">
+                      {account.proxy === "Lost" ? (
+                        <span className="text-red-500">{account.proxy}</span>
+                      ) : (
+                        <span className="truncate max-w-[200px]">{account.proxy}</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{account.connectedDate}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleToggleStatus(account.id)}
+                        title={account.status === "active" ? "Disconnect" : "Reconnect"}
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openProxyDialog(account.id)}
+                        title="Assign Proxy"
+                      >
+                        <Link className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteAccount(account.id)}
+                        title="Delete Account"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
         <div>
           <h1 className="text-2xl font-bold">YouTube Accounts</h1>
           <p className="text-muted-foreground">Manage your connected YouTube channels</p>
@@ -145,81 +290,10 @@ const Accounts = () => {
         </Button>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Proxy</TableHead>
-              <TableHead>Connected Since</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts.map((account) => (
-              <TableRow key={account.id}>
-                <TableCell className="font-medium">{account.email}</TableCell>
-                <TableCell>
-                  {account.status === "active" ? (
-                    <div className="flex items-center">
-                      <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
-                      <span>Active</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center">
-                      <XCircle className="mr-2 h-4 w-4 text-red-500" />
-                      <span>Inactive</span>
-                    </div>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center">
-                    {account.proxy === "Lost" ? (
-                      <span className="text-red-500">{account.proxy}</span>
-                    ) : (
-                      <span className="truncate max-w-[200px]">{account.proxy}</span>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{account.connectedDate}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleToggleStatus(account.id)}
-                      title={account.status === "active" ? "Disconnect" : "Reconnect"}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => openProxyDialog(account.id)}
-                      title="Assign Proxy"
-                    >
-                      <Link className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleDeleteAccount(account.id)}
-                      title="Delete Account"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {isMobile ? renderAccountCards() : renderAccountTable()}
 
-      {/* Add Account Dialog */}
       <Dialog open={isAddAccountOpen} onOpenChange={setIsAddAccountOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Add YouTube Account</DialogTitle>
             <DialogDescription>
@@ -255,9 +329,8 @@ const Accounts = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Proxy Dialog */}
       <Dialog open={isProxyDialogOpen} onOpenChange={setIsProxyDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Assign Proxy</DialogTitle>
             <DialogDescription>
