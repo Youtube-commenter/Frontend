@@ -45,23 +45,24 @@ const Accounts = () => {
   const isMobile = useIsMobile();
   const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = (authResult: { credential: any; }) => {
     setIsGoogleAuthLoading(true);
     
     try {
+      
       // Real Google OAuth login
-      const authResult = await signInWithGoogle();
+      const { credential }  =authResult
       
       // Add the authenticated account
       addAccount({
         id: Date.now(),
-        email: authResult.email,
+        email: credential.email,
         status: "active",
         proxy: proxyValue || "None",
         connectedDate: new Date().toISOString().split("T")[0],
-        channelId: authResult.channelInfo.channelId,
-        channelTitle: authResult.channelInfo.title,
-        thumbnailUrl: authResult.channelInfo.thumbnailUrl,
+        channelId: credential.channelInfo.channelId,
+        channelTitle: credential.channelInfo.title,
+        thumbnailUrl: credential.channelInfo.thumbnailUrl,
       });
       
       setIsAddAccountOpen(false);
