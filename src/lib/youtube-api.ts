@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 // YouTube API credentials
 const API_KEY = "AIzaSyBrhnAeCDiyjlwvCdqgPjRBs7b08r4QKjQ"; // Replace with your actual API key
-const OAUTH_CLIENT_ID = "306302817114-5bcro0pkebe5t4dipi17b5f17b44jkti.apps.googleusercontent.com"; // Replace with your actual OAuth client ID
+const OAUTH_CLIENT_ID = "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"; // Replace with your actual OAuth client ID
 const SCOPES = [
   "https://www.googleapis.com/auth/youtube.force-ssl",
   "https://www.googleapis.com/auth/youtube.readonly"
