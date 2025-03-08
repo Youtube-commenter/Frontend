@@ -143,7 +143,7 @@ const Accounts = () => {
           <div className="flex items-center">
             <Avatar className="mr-2 h-8 w-8">
               <AvatarImage src={account.thumbnailUrl} alt={account.channelTitle || account.email} />
-              <AvatarFallback>{account.email.toUpperCase()}</AvatarFallback>
+              <AvatarFallback>o</AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-base font-medium">
