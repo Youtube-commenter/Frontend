@@ -26,7 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useYouTubeAccounts } from "@/hooks/use-youtube-accounts";
 import { signInWithGoogle } from "@/lib/youtube-api";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage }   from "@/components/ui/avatar";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 const Accounts = () => {
   const { 
