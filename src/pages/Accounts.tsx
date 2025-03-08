@@ -255,7 +255,7 @@ const Accounts = () => {
                     <div className="flex items-center">
                       <Avatar className="mr-2 h-8 w-8">
                         <AvatarImage src={account.thumbnailUrl} alt={account.channelTitle || account.email} />
-                        <AvatarFallback>{account.email.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>o</AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="font-medium">{account.channelTitle || account.email}</div>
