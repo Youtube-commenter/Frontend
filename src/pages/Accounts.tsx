@@ -60,8 +60,8 @@ const Accounts = () => {
         status: "active",
         proxy: proxyValue || "None",
         connectedDate: new Date().toISOString().split("T")[0],
-        channelId: credential.channelInfo.channelId,
-        channelTitle: credential.channelInfo.title,
+        // channelId: credential.channelInfo.channelId,
+        // channelTitle: credential.channelInfo.title,
         thumbnailUrl: credential.channelInfo.thumbnailUrl,
       });
       
