@@ -344,7 +344,7 @@ const Accounts = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-            <GoogleOAuthProvider clientId="396826651221-8r29b9i81gophcgl8flrcsdffe9enl3e.apps.googleusercontent.com">
+            <GoogleOAuthProvider clientId="306302817114-5bcro0pkebe5t4dipi17b5f17b44jkti.apps.googleusercontent.com">
               <GoogleLogin
                 onSuccess={handleGoogleSignIn}
              
