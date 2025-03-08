@@ -28,6 +28,7 @@ import { useYouTubeAccounts } from "@/hooks/use-youtube-accounts";
 import { signInWithGoogle } from "@/lib/youtube-api";
 import { Avatar, AvatarFallback, AvatarImage }   from "@/components/ui/avatar";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
+import jwt_decode from "jwt-decode";
 const Accounts = () => {
   const { 
     accounts, 
@@ -47,7 +48,7 @@ const Accounts = () => {
 
   const handleGoogleSignIn = (authResult: { credential: any; }) => {
     setIsGoogleAuthLoading(true);
-    
+    const decodedToken: any = jwt_decode(credential);
     try {
       
       // Real Google OAuth login
@@ -57,7 +58,7 @@ const Accounts = () => {
       // Add the authenticated account
       addAccount({
         id: Date.now(),
-        email: credential.email,
+        email: decodedToken.email,
         status: "active",
         proxy: proxyValue || "None",
         connectedDate: new Date().toISOString().split("T")[0],
