@@ -52,7 +52,7 @@ const Accounts = () => {
       
       // Real Google OAuth login
       const { credential }  =authResult
-      console.log("auth ",credential);
+      console.log("auth ",credential,"auth Result",authResult);
       
       // Add the authenticated account
       addAccount({
