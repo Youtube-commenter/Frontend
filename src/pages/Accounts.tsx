@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { CheckCircle, XCircle, RefreshCw, Link, Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,82 +23,86 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useYouTubeAccounts } from "@/hooks/use-youtube-accounts";
-import { signInWithGoogle } from "@/lib/youtube-api";
-import { Avatar, AvatarFallback, AvatarImage }   from "@/components/ui/avatar";
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import jwt_decode from "jwt-decode";
+
+const initialAccounts = [
+  {
+    id: 1,
+    email: "channel1@gmail.com",
+    status: "active",
+    proxy: "http://user:pass@192.168.1.1:8080",
+    connectedDate: "2023-12-15",
+  },
+  {
+    id: 2,
+    email: "youtube-creator@gmail.com",
+    status: "active",
+    proxy: "http://proxy2.example.com:1234",
+    connectedDate: "2023-12-01",
+  },
+  {
+    id: 3,
+    email: "disconnected@gmail.com",
+    status: "inactive",
+    proxy: "Lost",
+    connectedDate: "2023-11-20",
+  },
+];
+
 const Accounts = () => {
-  const { 
-    accounts, 
-    isLoading,
-    addAccount, 
-    removeAccount, 
-    toggleAccountStatus, 
-    updateAccountProxy 
-  } = useYouTubeAccounts();
-  
+  const [accounts, setAccounts] = useState(initialAccounts);
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isProxyDialogOpen, setIsProxyDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [proxyValue, setProxyValue] = useState("");
   const isMobile = useIsMobile();
-  const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
 
-  const handleGoogleSignIn = (authResult: { credential: any; }) => {
-    setIsGoogleAuthLoading(true);
-    const decodedToken: any = jwt_decode(credential);
-    try {
-      
-      // Real Google OAuth login
-      const { credential }  =authResult
-      console.log("auth ",credential,"auth Result",authResult);
-      
-      // Add the authenticated account
-      addAccount({
-        id: Date.now(),
-        email: decodedToken.email,
-        status: "active",
-        proxy: proxyValue || "None",
-        connectedDate: new Date().toISOString().split("T")[0],
-        // channelId: credential.channelInfo.channelId,
-        // channelTitle: credential.channelInfo.title,
-        // thumbnailUrl: credential.channelInfo.thumbnailUrl,
-      });
-      
-      setIsAddAccountOpen(false);
-      setProxyValue("");
-    } catch (error) {
-      console.error("Google auth error", error);
-      // The toast notification is handled in the signInWithGoogle function
-    } finally {
-      setIsGoogleAuthLoading(false);
-    }
-  };
-
-  const handleManualAddAccount = () => {
-    toast.success("Manual account added", {
+  const handleAddAccount = () => {
+    toast.success("Authentication successful!", {
       description: "New YouTube account added successfully.",
     });
     
-    addAccount({
-      id: Date.now(),
-      email: `manual-account-${Math.floor(Math.random() * 1000)}@gmail.com`,
-      status: "active",
-      proxy: proxyValue || "None",
-      connectedDate: new Date().toISOString().split("T")[0],
-    });
+    setAccounts([
+      ...accounts,
+      {
+        id: accounts.length + 1,
+        email: `new-account-${Math.floor(Math.random() * 1000)}@gmail.com`,
+        status: "active",
+        proxy: proxyValue || "None",
+        connectedDate: new Date().toISOString().split("T")[0],
+      },
+    ]);
     
     setIsAddAccountOpen(false);
     setProxyValue("");
   };
 
   const handleToggleStatus = (id: number) => {
-    toggleAccountStatus(id);
+    setAccounts(
+      accounts.map((account) =>
+        account.id === id
+          ? {
+              ...account,
+              status: account.status === "active" ? "inactive" : "active",
+            }
+          : account
+      )
+    );
+    
+    const account = accounts.find((a) => a.id === id);
+    const newStatus = account?.status === "active" ? "inactive" : "active";
+    
+    toast.success(`Account ${newStatus === "active" ? "reconnected" : "disconnected"}`, {
+      description: `YouTube account ${account?.email} is now ${newStatus}.`,
+    });
   };
 
   const handleDeleteAccount = (id: number) => {
-    removeAccount(id);
+    const accountToDelete = accounts.find((a) => a.id === id);
+    setAccounts(accounts.filter((account) => account.id !== id));
+    
+    toast.success("Account removed", {
+      description: `YouTube account ${accountToDelete?.email} has been removed.`,
+    });
   };
 
   const openProxyDialog = (id: number) => {
@@ -111,50 +114,32 @@ const Accounts = () => {
 
   const handleSaveProxy = () => {
     if (!selectedAccountId) return;
-    updateAccountProxy(selectedAccountId, proxyValue);
+    
+    setAccounts(
+      accounts.map((account) =>
+        account.id === selectedAccountId
+          ? { ...account, proxy: proxyValue || "None" }
+          : account
+      )
+    );
+    
+    const account = accounts.find((a) => a.id === selectedAccountId);
+    
+    toast.success("Proxy updated", {
+      description: `Proxy settings updated for ${account?.email}.`,
+    });
+    
     setIsProxyDialogOpen(false);
     setProxyValue("");
     setSelectedAccountId(null);
   };
 
   const renderAccountCards = () => {
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-    
-    if (accounts.length === 0) {
-      return (
-        <Card className="bg-muted/40">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground mb-4">No YouTube accounts connected yet</p>
-            <Button onClick={() => setIsAddAccountOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Your First Account
-            </Button>
-          </CardContent>
-        </Card>
-      );
-    }
-    
     return accounts.map((account) => (
       <Card key={account.id} className="mb-4">
         <CardHeader className="pb-2">
-          <div className="flex items-center">
-            <Avatar className="mr-2 h-8 w-8">
-              <AvatarImage src={account.thumbnailUrl} alt={account.channelTitle || account.email} />
-              <AvatarFallback>o</AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-base font-medium">
-                {account.channelTitle || account.email}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">{account.email}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2 text-sm mt-2">
+          <CardTitle className="text-base font-medium">{account.email}</CardTitle>
+          <div className="flex items-center space-x-2 text-sm">
             {account.status === "active" ? (
               <div className="flex items-center">
                 <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
@@ -216,32 +201,13 @@ const Accounts = () => {
   };
 
   const renderAccountTable = () => {
-    if (isLoading) {
-      return (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-    
-    if (accounts.length === 0) {
-      return (
-        <div className="bg-muted/40 rounded-md border p-8 flex flex-col items-center justify-center">
-          <p className="text-muted-foreground mb-4">No YouTube accounts connected yet</p>
-          <Button onClick={() => setIsAddAccountOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Your First Account
-          </Button>
-        </div>
-      );
-    }
-    
     return (
       <div className="rounded-md border">
         <ScrollArea className="max-h-[65vh]">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Channel</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Proxy</TableHead>
                 <TableHead>Connected Since</TableHead>
@@ -251,18 +217,7 @@ const Accounts = () => {
             <TableBody>
               {accounts.map((account) => (
                 <TableRow key={account.id}>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Avatar className="mr-2 h-8 w-8">
-                        <AvatarImage src={account.thumbnailUrl} alt={account.channelTitle || account.email} />
-                        <AvatarFallback>o</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{account.channelTitle || account.email}</div>
-                        <div className="text-xs text-muted-foreground">{account.email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
+                  <TableCell className="font-medium">{account.email}</TableCell>
                   <TableCell>
                     {account.status === "active" ? (
                       <div className="flex items-center">
@@ -347,14 +302,9 @@ const Accounts = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-            <GoogleOAuthProvider clientId="306302817114-5bcro0pkebe5t4dipi17b5f17b44jkti.apps.googleusercontent.com">
-              <GoogleLogin
-                onSuccess={handleGoogleSignIn}
-             
-                text={"Sign up with google"}
-                className="google-login-button"
-              />
-            </GoogleOAuthProvider> 
+              <Button className="w-full" onClick={() => toast("Google OAuth triggered", { description: "This would redirect to Google login in a real app." })}>
+                Sign in with Google
+              </Button>
               <p className="text-sm text-center text-muted-foreground">or</p>
             </div>
             <div className="space-y-2">
@@ -374,7 +324,7 @@ const Accounts = () => {
             <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleManualAddAccount}>Add Manually</Button>
+            <Button onClick={handleAddAccount}>Add Account</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
