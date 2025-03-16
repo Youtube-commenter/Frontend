@@ -28,7 +28,8 @@ import { useYouTubeAccounts } from "@/hooks/use-youtube-accounts";
 import { signInWithGoogle } from "@/lib/youtube-api";
 import { Avatar, AvatarFallback, AvatarImage }   from "@/components/ui/avatar";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import jwt_decode from "jwt-decode";
+import * as jwtDecode from "jwt-decode"; // Fix import to use named import
+
 const Accounts = () => {
   const { 
     accounts, 
@@ -46,14 +47,21 @@ const Accounts = () => {
   const isMobile = useIsMobile();
   const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
 
-  const handleGoogleSignIn = (authResult: { credential: any; }) => {
-    setIsGoogleAuthLoading(true);
-    const decodedToken: any = jwt_decode(credential);
+  const handleGoogleSignIn = async (authResult: { credential: string }) => {
     try {
+      setIsGoogleAuthLoading(true);
       
-      // Real Google OAuth login
-      const { credential }  =authResult
-      console.log("auth ",credential,"auth Result",authResult);
+      if (!authResult.credential) {
+        throw new Error("Authentication failed - no credential received");
+      }
+      
+      // Decode the JWT token
+      const decodedToken: any = jwtDecode.jwtDecode(authResult.credential);
+      console.log("Decoded token:", decodedToken);
+      
+      if (!decodedToken.email) {
+        throw new Error("Email not found in the decoded token");
+      }
       
       // Add the authenticated account
       addAccount({
@@ -62,16 +70,22 @@ const Accounts = () => {
         status: "active",
         proxy: proxyValue || "None",
         connectedDate: new Date().toISOString().split("T")[0],
-        // channelId: credential.channelInfo.channelId,
-        // channelTitle: credential.channelInfo.title,
-        // thumbnailUrl: credential.channelInfo.thumbnailUrl,
+        channelId: decodedToken.sub || "",
+        channelTitle: decodedToken.name || decodedToken.email,
+        thumbnailUrl: decodedToken.picture || "",
+      });
+      
+      toast.success("Account connected", {
+        description: `YouTube account ${decodedToken.email} has been added successfully.`,
       });
       
       setIsAddAccountOpen(false);
       setProxyValue("");
     } catch (error) {
       console.error("Google auth error", error);
-      // The toast notification is handled in the signInWithGoogle function
+      toast.error("Authentication failed", {
+        description: (error as Error).message || "Could not connect to Google account.",
+      });
     } finally {
       setIsGoogleAuthLoading(false);
     }
@@ -347,14 +361,23 @@ const Accounts = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-            <GoogleOAuthProvider clientId="306302817114-5bcro0pkebe5t4dipi17b5f17b44jkti.apps.googleusercontent.com">
-              <GoogleLogin
-                onSuccess={handleGoogleSignIn}
-             
-                text={"Sign up with google"}
-                className="google-login-button"
-              />
-            </GoogleOAuthProvider> 
+              <GoogleOAuthProvider clientId="306302817114-5bcro0pkebe5t4dipi17b5f17b44jkti.apps.googleusercontent.com">
+                <div className="w-full flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSignIn}
+                    onError={() => {
+                      toast.error("Google Sign-In Failed", {
+                        description: "Could not authenticate with Google. Please try again."
+                      });
+                    }}
+                    useOneTap
+                    theme="filled_blue"
+                    text="signin_with"
+                    shape="pill"
+                    width="280px"
+                  />
+                </div>
+              </GoogleOAuthProvider> 
               <p className="text-sm text-center text-muted-foreground">or</p>
             </div>
             <div className="space-y-2">

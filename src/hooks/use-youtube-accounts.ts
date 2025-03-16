@@ -27,6 +27,9 @@ export const useYouTubeAccounts = () => {
       } catch (err) {
         console.error("Error initializing YouTube accounts", err);
         setError(err as Error);
+        toast.error("Failed to load accounts", {
+          description: "There was an error loading your saved YouTube accounts."
+        });
       } finally {
         setIsLoading(false);
       }
@@ -59,9 +62,6 @@ export const useYouTubeAccounts = () => {
       
       // Add new account
       const newAccounts = [...prevAccounts, account];
-      toast.success("Account added", {
-        description: `YouTube account ${account.email} added successfully.`,
-      });
       
       return newAccounts;
     });
@@ -69,11 +69,20 @@ export const useYouTubeAccounts = () => {
 
   // Update an existing account
   const updateAccount = (id: number, updates: Partial<YouTubeAccount>) => {
-    setAccounts((prevAccounts) =>
-      prevAccounts.map((account) =>
+    setAccounts((prevAccounts) => {
+      const newAccounts = prevAccounts.map((account) => 
         account.id === id ? { ...account, ...updates } : account
-      )
-    );
+      );
+      
+      const updatedAccount = newAccounts.find(a => a.id === id);
+      if (updatedAccount) {
+        toast.success("Account updated", {
+          description: `YouTube account ${updatedAccount.email} has been updated.`,
+        });
+      }
+      
+      return newAccounts;
+    });
   };
 
   // Remove an account
@@ -122,6 +131,16 @@ export const useYouTubeAccounts = () => {
     });
   };
 
+  // Get active accounts
+  const getActiveAccounts = () => {
+    return accounts.filter(account => account.status === "active");
+  };
+
+  // Get account by id
+  const getAccountById = (id: number) => {
+    return accounts.find(account => account.id === id);
+  };
+
   return {
     accounts,
     isLoading,
@@ -131,5 +150,7 @@ export const useYouTubeAccounts = () => {
     removeAccount,
     toggleAccountStatus,
     updateAccountProxy,
+    getActiveAccounts,
+    getAccountById
   };
 };
