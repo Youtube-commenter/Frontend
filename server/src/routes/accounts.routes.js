@@ -20,6 +20,13 @@ router.get('/', authenticateJWT, accountsController.getAllAccounts);
 router.get('/:id', authenticateJWT, accountsController.getAccountById);
 
 /**
+ * @route POST /api/accounts
+ * @desc Add a new YouTube account
+ * @access Private
+ */
+router.post('/', authenticateJWT, accountsController.addAccount);
+
+/**
  * @route PUT /api/accounts/:id
  * @desc Update a YouTube account
  * @access Private
