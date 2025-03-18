@@ -76,4 +76,25 @@ export const youtubeAccountsApi = {
   delete: (id: string) => api.delete<{ message: string }>(`/accounts/${id}`),
   refreshToken: (id: string) => api.post<{ message: string, expiresAt: string }>(`/accounts/${id}/refresh-token`),
   verify: (id: string) => api.post<{ message: string, channel: any }>(`/accounts/${id}/verify`),
+  getQuota: () => api.get<{ quota: any }>("/accounts/quota"),
+};
+
+// Comment specific API methods
+export const commentsApi = {
+  getAll: (params?: { page?: number; limit?: number; status?: string }) => 
+    api.get<{ comments: any[], pagination: any }>(`/comments${params ? `?${new URLSearchParams(params as any).toString()}` : ''}`),
+  getStats: () => api.get<{ comments: any[] }>("/comments/stats"),
+};
+
+// Scheduler specific API methods
+export const schedulerApi = {
+  getAll: (params?: { page?: number; limit?: number; status?: string }) => 
+    api.get<{ schedules: any[], pagination: any }>(`/scheduler${params ? `?${new URLSearchParams(params as any).toString()}` : ''}`),
+  getById: (id: string) => api.get<{ schedule: any, comments: any[] }>(`/scheduler/${id}`),
+  create: (scheduleData: any) => api.post<{ schedule: any, message: string }>("/scheduler", scheduleData),
+  update: (id: string, updates: any) => api.put<{ schedule: any, message: string }>(`/scheduler/${id}`, updates),
+  delete: (id: string) => api.delete<{ message: string }>(`/scheduler/${id}`),
+  pause: (id: string) => api.post<{ schedule: any, message: string }>(`/scheduler/${id}/pause`),
+  resume: (id: string) => api.post<{ schedule: any, message: string }>(`/scheduler/${id}/resume`),
+  getSummary: () => api.get<{ schedulers: any }>("/scheduler/summary"),
 };
