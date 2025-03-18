@@ -4,6 +4,7 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const { UserModel } = require('../models/user.model');
 const { authenticateJWT } = require('../middleware/auth.middleware');
+const crypto = require('crypto');
 
 const router = express.Router();
 
@@ -89,6 +90,72 @@ router.post('/login', async (req, res, next) => {
         email: user.email
       }
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route POST /api/auth/forgot-password
+ * @desc Request password reset
+ * @access Public
+ */
+router.post('/forgot-password', async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    
+    // Find user
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      // For security reasons, don't reveal that the user doesn't exist
+      return res.status(200).json({ message: 'Password reset email sent if account exists' });
+    }
+
+    // Generate reset token
+    const resetToken = crypto.randomBytes(20).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+    
+    // Save token to user
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpiry;
+    await user.save();
+    
+    // In a real app, you would send an email with the reset link
+    // For this example, we'll just log it
+    console.log(`Reset token for ${email}: ${resetToken}`);
+    
+    res.status(200).json({ message: 'Password reset email sent' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route POST /api/auth/reset-password
+ * @desc Reset password using token
+ * @access Public
+ */
+router.post('/reset-password', async (req, res, next) => {
+  try {
+    const { token, password } = req.body;
+    
+    // Find user with valid token
+    const user = await UserModel.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+    
+    // Update password
+    user.password = password;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+    
+    res.status(200).json({ message: 'Password reset successful' });
   } catch (error) {
     next(error);
   }

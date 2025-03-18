@@ -75,6 +75,40 @@ export const registerUser = async (credentials: RegisterCredentials): Promise<Au
   }
 };
 
+// Request password reset
+export const requestPasswordReset = async (email: string): Promise<void> => {
+  try {
+    await api.post("/auth/forgot-password", { email });
+    
+    toast.success("Password reset email sent", {
+      description: "Please check your email for instructions",
+    });
+  } catch (error) {
+    console.error("Password reset request failed", error);
+    toast.error("Password reset request failed", {
+      description: (error as Error).message || "Please try again later",
+    });
+    throw error;
+  }
+};
+
+// Reset password
+export const resetPassword = async (token: string, password: string): Promise<void> => {
+  try {
+    await api.post("/auth/reset-password", { token, password });
+    
+    toast.success("Password reset successful", {
+      description: "You can now log in with your new password",
+    });
+  } catch (error) {
+    console.error("Password reset failed", error);
+    toast.error("Password reset failed", {
+      description: (error as Error).message || "Invalid or expired token. Please request a new reset link.",
+    });
+    throw error;
+  }
+};
+
 // Logout user
 export const logoutUser = () => {
   localStorage.removeItem("token");
