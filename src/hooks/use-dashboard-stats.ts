@@ -30,6 +30,10 @@ export const useDashboardStats = () => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: async (): Promise<DashboardStats> => {
+      // Define daysOfWeek outside the try/catch so it's accessible in both blocks
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const today = new Date();
+      
       try {
         // Fetch comments data for the last 7 days
         const commentsResponse = await api.get<{ comments: any[] }>("/comments/stats");
@@ -41,8 +45,6 @@ export const useDashboardStats = () => {
         const schedulersResponse = await api.get<{ schedulers: any }>("/scheduler/summary");
         
         // Process comments data for the chart
-        const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const today = new Date();
         const commentStats = daysOfWeek.map((day, index) => {
           const date = new Date();
           date.setDate(today.getDate() - (today.getDay() - index + 7) % 7);
