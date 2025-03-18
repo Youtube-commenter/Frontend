@@ -1,6 +1,6 @@
 
 import React, { createContext, useState, useEffect, useContext } from "react";
-import { getCurrentUser, isAuthenticated } from "./auth-service";
+import { getCurrentUser, isAuthenticated as checkIsAuthenticated } from "./auth-service";
 
 interface User {
   id: string;
@@ -26,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   useEffect(() => {
     const loadUser = async () => {
-      if (isAuthenticated()) {
+      if (checkIsAuthenticated()) {
         try {
           const userData = await getCurrentUser();
           setUser(userData);
@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value = {
     user,
     isLoading,
-    isAuthenticated: Boolean(user),
+    isAuthenticated: Boolean(user) || checkIsAuthenticated(),
   };
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

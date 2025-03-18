@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Accounts from "./pages/Accounts";
 import CommentScheduler from "./pages/CommentScheduler";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
 
 const App = () => (
   <TooltipProvider>
@@ -17,6 +18,7 @@ const App = () => (
     <BrowserRouter>
       <SidebarProvider>
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="dashboard" element={<Dashboard />} />
