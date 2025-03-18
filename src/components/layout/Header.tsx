@@ -11,8 +11,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-
+import { useNavigate } from "react-router-dom";
 const Header = () => {
+  const navigate = useNavigate();
+  const handleLogout = () => {
+    // Clear the token from localStorage or sessionStorage
+    localStorage.removeItem("token");
+    localStorage.removeItem("refresh_token"); // If you're using a refresh token
+
+    // Redirect to the login page after logout
+    navigate("/login");  // Use Navigate to redirect to login page
+  };
+
   return (
     <header className="border-b border-gray-200 bg-white px-6 py-3">
       <div className="flex justify-between items-center">
@@ -48,7 +58,7 @@ const Header = () => {
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

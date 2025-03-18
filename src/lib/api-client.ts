@@ -6,6 +6,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000/api"
 
 // Get the JWT token from localStorage
 const getToken = () => localStorage.getItem("token");
+const token = localStorage.getItem("token");
+console.log("Token from localStorage:", token);
 
 // Helper function to handle API responses
 const handleResponse = async (response: Response) => {

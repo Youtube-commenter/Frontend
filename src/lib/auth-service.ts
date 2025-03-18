@@ -31,6 +31,7 @@ export const getCurrentUser = async () => {
   }
 };
 
+
 // Login user
 export const loginUser = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
@@ -38,7 +39,7 @@ export const loginUser = async (credentials: LoginCredentials): Promise<AuthResp
     
     // Store token
     localStorage.setItem("token", response.token);
-    
+
     toast.success("Login successful", {
       description: `Welcome back, ${response.user.name || response.user.email}!`,
     });

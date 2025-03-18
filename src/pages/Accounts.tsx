@@ -49,6 +49,7 @@ const Accounts = () => {
   const isMobile = useIsMobile();
   const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
 
+
   const handleGoogleSignIn = async (authResult: { credential: string }) => {
     try {
       setIsGoogleAuthLoading(true);
