@@ -1,132 +1,178 @@
-import { useState, useEffect } from "react";
-import { YouTubeAccount, initializeAPIs } from "@/lib/youtube-api";
-import { toast } from "sonner";
 
-const LOCAL_STORAGE_KEY = "youtube-auto-commenter-accounts";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { youtubeAccountsApi } from "@/lib/api-client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+export interface YouTubeAccount {
+  _id: string;
+  email: string;
+  status: "active" | "inactive" | "limited" | "banned";
+  channelId?: string;
+  channelTitle?: string;
+  thumbnailUrl?: string;
+  proxy?: string | null;
+  connectedDate: string;
+  google?: {
+    tokenExpiry?: string;
+  };
+}
 
 export const useYouTubeAccounts = () => {
-  const [accounts, setAccounts] = useState<YouTubeAccount[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    const loadAccounts = async () => {
-      try {
-        setIsLoading(true);
-        
-        const savedAccounts = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (savedAccounts) {
-          setAccounts(JSON.parse(savedAccounts));
-        }
-        
-        await initializeAPIs();
-      } catch (err) {
-        console.error("Error initializing YouTube accounts", err);
-        setError(err as Error);
-        toast.error("Failed to load accounts", {
-          description: "There was an error loading your saved YouTube accounts."
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadAccounts();
-  }, []);
-
-  useEffect(() => {
-    if (accounts.length > 0) {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(accounts));
+  const queryClient = useQueryClient();
+  
+  // Fetch all accounts
+  const { 
+    data, 
+    isLoading, 
+    error 
+  } = useQuery({
+    queryKey: ['youtubeAccounts'],
+    queryFn: async () => {
+      const response = await youtubeAccountsApi.getAll();
+      return response.accounts;
     }
-  }, [accounts]);
-
-  const addAccount = (account: YouTubeAccount) => {
-    setAccounts((prevAccounts) => {
-      const existingAccount = prevAccounts.find(
-        (a) => a.email === account.email
-      );
-      
-      if (existingAccount) {
-        toast.info("Account already exists", {
-          description: `The YouTube account ${account.email} is already connected.`,
-        });
-        return prevAccounts;
-      }
-      
-      const newAccounts = [...prevAccounts, account];
-      
-      return newAccounts;
-    });
-  };
-
-  const updateAccount = (id: number, updates: Partial<YouTubeAccount>) => {
-    setAccounts((prevAccounts) => {
-      const newAccounts = prevAccounts.map((account) => 
-        account.id === id ? { ...account, ...updates } : account
-      );
-      
-      const updatedAccount = newAccounts.find(a => a.id === id);
-      if (updatedAccount) {
-        toast.success("Account updated", {
-          description: `YouTube account ${updatedAccount.email} has been updated.`,
-        });
-      }
-      
-      return newAccounts;
-    });
-  };
-
-  const removeAccount = (id: number) => {
-    setAccounts((prevAccounts) => {
-      const accountToRemove = prevAccounts.find((a) => a.id === id);
-      if (accountToRemove) {
-        toast.success("Account removed", {
-          description: `YouTube account ${accountToRemove.email} has been removed.`,
-        });
-      }
-      return prevAccounts.filter((account) => account.id !== id);
-    });
-  };
-
-  const toggleAccountStatus = (id: number) => {
-    setAccounts((prevAccounts) => {
-      const newAccounts = prevAccounts.map((account) => {
-        if (account.id === id) {
-          const newStatus: "active" | "inactive" = account.status === "active" ? "inactive" : "active";
-          toast.success(`Account ${newStatus === "active" ? "reconnected" : "disconnected"}`, {
-            description: `YouTube account ${account.email} is now ${newStatus}.`,
-          });
-          return { ...account, status: newStatus };
-        }
-        return account;
+  });
+  
+  const accounts = data || [];
+  
+  // Add a new account
+  const addAccountMutation = useMutation({
+    mutationFn: (accountData: {
+      accessToken: string;
+      refreshToken: string;
+      email: string;
+      proxy?: string;
+    }) => youtubeAccountsApi.add(accountData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['youtubeAccounts'] });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to add account", {
+        description: error.message,
       });
-      return newAccounts;
-    });
-  };
-
-  const updateAccountProxy = (id: number, proxy: string) => {
-    setAccounts((prevAccounts) => {
-      const newAccounts = prevAccounts.map((account) => {
-        if (account.id === id) {
-          toast.success("Proxy updated", {
-            description: `Proxy settings updated for ${account.email}.`,
-          });
-          return { ...account, proxy: proxy || "None" };
-        }
-        return account;
+    }
+  });
+  
+  // Update an account
+  const updateAccountMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<YouTubeAccount> }) => 
+      youtubeAccountsApi.update(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['youtubeAccounts'] });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to update account", {
+        description: error.message,
       });
-      return newAccounts;
+    }
+  });
+  
+  // Delete an account
+  const removeAccountMutation = useMutation({
+    mutationFn: (id: string) => youtubeAccountsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['youtubeAccounts'] });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to remove account", {
+        description: error.message,
+      });
+    }
+  });
+  
+  // Verify an account
+  const verifyAccountMutation = useMutation({
+    mutationFn: (id: string) => youtubeAccountsApi.verify(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['youtubeAccounts'] });
+      toast.success(data.message, {
+        description: `Channel verified: ${data.channel.title}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to verify account", {
+        description: error.message,
+      });
+    }
+  });
+  
+  // Refresh token for an account
+  const refreshTokenMutation = useMutation({
+    mutationFn: (id: string) => youtubeAccountsApi.refreshToken(id),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['youtubeAccounts'] });
+      toast.success(data.message, {
+        description: `Token valid until: ${new Date(data.expiresAt).toLocaleString()}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Failed to refresh token", {
+        description: error.message,
+      });
+    }
+  });
+  
+  // Add account function
+  const addAccount = (accountData: {
+    accessToken: string;
+    refreshToken: string;
+    email: string;
+    proxy?: string;
+  }) => {
+    addAccountMutation.mutate(accountData);
+  };
+  
+  // Update account function
+  const updateAccount = (id: string, updates: Partial<YouTubeAccount>) => {
+    updateAccountMutation.mutate({ id, updates });
+  };
+  
+  // Remove account function
+  const removeAccount = (id: string) => {
+    removeAccountMutation.mutate(id);
+  };
+  
+  // Toggle account status
+  const toggleAccountStatus = (id: string) => {
+    const account = accounts.find(acc => acc._id === id);
+    if (account) {
+      const newStatus = account.status === "active" ? "inactive" : "active";
+      updateAccountMutation.mutate({ 
+        id, 
+        updates: { status: newStatus } 
+      });
+    }
+  };
+  
+  // Update account proxy
+  const updateAccountProxy = (id: string, proxy: string) => {
+    updateAccountMutation.mutate({ 
+      id, 
+      updates: { proxy: proxy || null } 
     });
   };
-
+  
+  // Verify account
+  const verifyAccount = (id: string) => {
+    verifyAccountMutation.mutate(id);
+  };
+  
+  // Refresh token
+  const refreshToken = (id: string) => {
+    refreshTokenMutation.mutate(id);
+  };
+  
+  // Get active accounts
   const getActiveAccounts = () => {
     return accounts.filter(account => account.status === "active");
   };
-
-  const getAccountById = (id: number) => {
-    return accounts.find(account => account.id === id);
+  
+  // Get account by ID
+  const getAccountById = (id: string) => {
+    return accounts.find(account => account._id === id);
   };
-
+  
   return {
     accounts,
     isLoading,
@@ -136,6 +182,8 @@ export const useYouTubeAccounts = () => {
     removeAccount,
     toggleAccountStatus,
     updateAccountProxy,
+    verifyAccount,
+    refreshToken,
     getActiveAccounts,
     getAccountById
   };

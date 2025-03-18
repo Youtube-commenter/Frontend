@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { CheckCircle, XCircle, RefreshCw, Link, Trash2, Plus } from "lucide-react";
+import { CheckCircle, XCircle, RefreshCw, Link, Trash2, Plus, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -24,25 +24,27 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useYouTubeAccounts } from "@/hooks/use-youtube-accounts";
-import { signInWithGoogle } from "@/lib/youtube-api";
-import { Avatar, AvatarFallback, AvatarImage }   from "@/components/ui/avatar";
+import { useYouTubeAccounts, YouTubeAccount } from "@/hooks/use-youtube-accounts";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import * as jwtDecode from "jwt-decode"; // Fix import to use named import
+import { jwtDecode } from "jwt-decode";
 
 const Accounts = () => {
   const { 
     accounts, 
     isLoading,
+    error,
     addAccount, 
     removeAccount, 
     toggleAccountStatus, 
-    updateAccountProxy 
+    updateAccountProxy,
+    verifyAccount,
+    refreshToken
   } = useYouTubeAccounts();
   
   const [isAddAccountOpen, setIsAddAccountOpen] = useState(false);
   const [isProxyDialogOpen, setIsProxyDialogOpen] = useState(false);
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
   const [proxyValue, setProxyValue] = useState("");
   const isMobile = useIsMobile();
   const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
@@ -55,28 +57,22 @@ const Accounts = () => {
         throw new Error("Authentication failed - no credential received");
       }
       
-      // Decode the JWT token
-      const decodedToken: any = jwtDecode.jwtDecode(authResult.credential);
+      // Decode the JWT token to get user info
+      const decodedToken: any = jwtDecode(authResult.credential);
       console.log("Decoded token:", decodedToken);
       
       if (!decodedToken.email) {
         throw new Error("Email not found in the decoded token");
       }
       
-      // Add the authenticated account
+      // Here we're getting the tokens from Google's response
+      // In a real implementation, we'd exchange this credential for 
+      // proper OAuth tokens on the backend, but for simplicity:
       addAccount({
-        id: Date.now(),
         email: decodedToken.email,
-        status: "active",
-        proxy: proxyValue || "None",
-        connectedDate: new Date().toISOString().split("T")[0],
-        channelId: decodedToken.sub || "",
-        channelTitle: decodedToken.name || decodedToken.email,
-        thumbnailUrl: decodedToken.picture || "",
-      });
-      
-      toast.success("Account connected", {
-        description: `YouTube account ${decodedToken.email} has been added successfully.`,
+        accessToken: authResult.credential, // This is just a placeholder
+        refreshToken: "refresh_token", // This is just a placeholder
+        proxy: proxyValue || undefined
       });
       
       setIsAddAccountOpen(false);
@@ -91,35 +87,14 @@ const Accounts = () => {
     }
   };
 
-  const handleManualAddAccount = () => {
-    toast.success("Manual account added", {
-      description: "New YouTube account added successfully.",
-    });
-    
-    addAccount({
-      id: Date.now(),
-      email: `manual-account-${Math.floor(Math.random() * 1000)}@gmail.com`,
-      status: "active",
-      proxy: proxyValue || "None",
-      connectedDate: new Date().toISOString().split("T")[0],
-    });
-    
-    setIsAddAccountOpen(false);
-    setProxyValue("");
-  };
-
-  const handleToggleStatus = (id: number) => {
-    toggleAccountStatus(id);
-  };
-
-  const handleDeleteAccount = (id: number) => {
+  const handleDeleteAccount = (id: string) => {
     removeAccount(id);
   };
 
-  const openProxyDialog = (id: number) => {
-    const account = accounts.find((a) => a.id === id);
+  const openProxyDialog = (id: string) => {
+    const account = accounts.find((a) => a._id === id);
     setSelectedAccountId(id);
-    setProxyValue(account?.proxy === "Lost" || account?.proxy === "None" ? "" : account?.proxy || "");
+    setProxyValue(account?.proxy || "");
     setIsProxyDialogOpen(true);
   };
 
@@ -131,12 +106,36 @@ const Accounts = () => {
     setSelectedAccountId(null);
   };
 
+  const handleVerifyAccount = (id: string) => {
+    verifyAccount(id);
+  };
+
+  const handleRefreshToken = (id: string) => {
+    refreshToken(id);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
   const renderAccountCards = () => {
     if (isLoading) {
       return (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <Card className="bg-muted/40">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+            <p className="text-muted-foreground mb-2">Failed to load accounts</p>
+            <p className="text-sm text-center text-muted-foreground">{(error as Error).message}</p>
+          </CardContent>
+        </Card>
       );
     }
     
@@ -154,12 +153,14 @@ const Accounts = () => {
     }
     
     return accounts.map((account) => (
-      <Card key={account.id} className="mb-4">
+      <Card key={account._id} className="mb-4">
         <CardHeader className="pb-2">
           <div className="flex items-center">
             <Avatar className="mr-2 h-8 w-8">
               <AvatarImage src={account.thumbnailUrl} alt={account.channelTitle || account.email} />
-              <AvatarFallback>o</AvatarFallback>
+              <AvatarFallback>
+                {account.email.charAt(0).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div>
               <CardTitle className="text-base font-medium">
@@ -186,28 +187,26 @@ const Accounts = () => {
           <div className="grid gap-2">
             <div>
               <div className="text-muted-foreground mb-1">Proxy:</div>
-              <div className={account.proxy === "Lost" ? "text-red-500" : ""}>
-                {account.proxy}
-              </div>
+              <div>{account.proxy || "None"}</div>
             </div>
             <div>
               <div className="text-muted-foreground mb-1">Connected Since:</div>
-              <div>{account.connectedDate}</div>
+              <div>{formatDate(account.connectedDate)}</div>
             </div>
             <div className="flex items-center justify-between mt-2 pt-2 border-t">
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleToggleStatus(account.id)}
+                onClick={() => toggleAccountStatus(account._id)}
                 className="h-8 px-2"
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                {account.status === "active" ? "Disconnect" : "Reconnect"}
+                {account.status === "active" ? "Deactivate" : "Activate"}
               </Button>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => openProxyDialog(account.id)}
+                onClick={() => openProxyDialog(account._id)}
                 className="h-8 px-2"
               >
                 <Link className="h-4 w-4 mr-2" />
@@ -216,7 +215,16 @@ const Accounts = () => {
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => handleDeleteAccount(account.id)}
+                onClick={() => handleVerifyAccount(account._id)}
+                className="h-8 px-2"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Verify
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleDeleteAccount(account._id)}
                 className="h-8 px-2"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -234,6 +242,16 @@ const Accounts = () => {
       return (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="bg-muted/40 rounded-md border p-8 flex flex-col items-center justify-center">
+          <AlertCircle className="h-10 w-10 text-destructive mb-4" />
+          <p className="text-muted-foreground mb-2">Failed to load accounts</p>
+          <p className="text-sm text-center text-muted-foreground">{(error as Error).message}</p>
         </div>
       );
     }
@@ -264,12 +282,14 @@ const Accounts = () => {
             </TableHeader>
             <TableBody>
               {accounts.map((account) => (
-                <TableRow key={account.id}>
+                <TableRow key={account._id}>
                   <TableCell>
                     <div className="flex items-center">
                       <Avatar className="mr-2 h-8 w-8">
                         <AvatarImage src={account.thumbnailUrl} alt={account.channelTitle || account.email} />
-                        <AvatarFallback>o</AvatarFallback>
+                        <AvatarFallback>
+                          {account.email.charAt(0).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="font-medium">{account.channelTitle || account.email}</div>
@@ -291,29 +311,23 @@ const Accounts = () => {
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center">
-                      {account.proxy === "Lost" ? (
-                        <span className="text-red-500">{account.proxy}</span>
-                      ) : (
-                        <span className="truncate max-w-[200px]">{account.proxy}</span>
-                      )}
-                    </div>
+                    <span className="truncate max-w-[200px]">{account.proxy || "None"}</span>
                   </TableCell>
-                  <TableCell>{account.connectedDate}</TableCell>
+                  <TableCell>{formatDate(account.connectedDate)}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => handleToggleStatus(account.id)}
-                        title={account.status === "active" ? "Disconnect" : "Reconnect"}
+                        onClick={() => toggleAccountStatus(account._id)}
+                        title={account.status === "active" ? "Deactivate" : "Activate"}
                       >
                         <RefreshCw className="h-4 w-4" />
                       </Button>
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => openProxyDialog(account.id)}
+                        onClick={() => openProxyDialog(account._id)}
                         title="Assign Proxy"
                       >
                         <Link className="h-4 w-4" />
@@ -321,7 +335,23 @@ const Accounts = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        onClick={() => handleDeleteAccount(account.id)}
+                        onClick={() => handleVerifyAccount(account._id)}
+                        title="Verify Account"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRefreshToken(account._id)}
+                        title="Refresh Token"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDeleteAccount(account._id)}
                         title="Delete Account"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -378,10 +408,10 @@ const Accounts = () => {
                   />
                 </div>
               </GoogleOAuthProvider> 
-              <p className="text-sm text-center text-muted-foreground">or</p>
+              <p className="text-sm text-center text-muted-foreground mt-4 mb-2">Optional settings</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="proxy">Proxy Settings (Optional)</Label>
+              <Label htmlFor="proxy">Proxy Settings</Label>
               <Input
                 id="proxy"
                 placeholder="http://user:pass@host:port"
@@ -397,7 +427,6 @@ const Accounts = () => {
             <Button variant="outline" onClick={() => setIsAddAccountOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleManualAddAccount}>Add Manually</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

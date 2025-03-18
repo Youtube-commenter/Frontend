@@ -1,15 +1,21 @@
 
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEffect, useState } from "react";
 import { initializeAPIs } from "@/lib/youtube-api";
 import { toast } from "sonner";
+import { useAuth } from "@/lib/auth-context";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client
+const queryClient = new QueryClient();
 
 const Layout = () => {
   const isMobile = useIsMobile();
   const [isInitializing, setIsInitializing] = useState(true);
+  const { isAuthenticated, isLoading } = useAuth();
   
   useEffect(() => {
     // Initialize YouTube API when the app starts
@@ -31,22 +37,38 @@ const Layout = () => {
     init();
   }, []);
   
-  return (
-    <div className="min-h-screen flex w-full bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col">
-        <Header />
-        <main className={`flex-1 overflow-auto ${isMobile ? 'p-3' : 'p-6'}`}>
-          {isInitializing ? (
-            <div className="flex justify-center items-center h-full opacity-50">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <Outlet />
-          )}
-        </main>
+  // Show loading state while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
       </div>
-    </div>
+    );
+  }
+  
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return (
+    <QueryClientProvider client={queryClient}>
+      <div className="min-h-screen flex w-full bg-gray-50">
+        <Sidebar />
+        <div className="flex-1 flex flex-col">
+          <Header />
+          <main className={`flex-1 overflow-auto ${isMobile ? 'p-3' : 'p-6'}`}>
+            {isInitializing ? (
+              <div className="flex justify-center items-center h-full opacity-50">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <Outlet />
+            )}
+          </main>
+        </div>
+      </div>
+    </QueryClientProvider>
   );
 };
 
