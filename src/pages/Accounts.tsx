@@ -48,7 +48,7 @@ const Accounts = () => {
   const [proxyValue, setProxyValue] = useState("");
   const isMobile = useIsMobile();
   const [isGoogleAuthLoading, setIsGoogleAuthLoading] = useState(false);
-
+  const clientId = import.meta.env.VITE_GOOGLE_OAUTH_CLIENT_ID;
 
   const handleGoogleSignIn = async (authResult: { credential: string }) => {
     try {
@@ -392,7 +392,8 @@ const Accounts = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <GoogleOAuthProvider clientId="306302817114-5bcro0pkebe5t4dipi17b5f17b44jkti.apps.googleusercontent.com">
+      
+              <GoogleOAuthProvider clientId={clientId}>
                 <div className="w-full flex justify-center">
                   <GoogleLogin
                     onSuccess={handleGoogleSignIn}
